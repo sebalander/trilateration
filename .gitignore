@@ -99,3 +99,9 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# added by me
+*.png
+*.jpg
+*.jpeg
+
