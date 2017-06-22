@@ -8,9 +8,11 @@ import numpy as np
 import numpy.linalg as ln
 import matplotlib.pyplot as plt
 import numdifftools as ndf
+from scipy.special import chdtri
+
 
 # %%
-kml_file = "/home/sebalander/Code/VisionUNQextra/trilateracion/trilat.kml"
+kml_file = "/home/sebalander/Code/VisionUNQextra/trilateration/trilat.kml"
 
 # %%
 texto = open(kml_file, 'r').read()
@@ -143,11 +145,11 @@ db = np.mean(Db, axis=2)
 plt.figure()
 plt.imshow(np.hstack([db, dg]))
 
-plt.figure()
-plt.imshow(db - dg)
-
-plt.figure()
-plt.imshow((db - dg) / db)
+#plt.figure()
+#plt.imshow(db - dg)
+#
+#plt.figure()
+#plt.imshow((db - dg) / db)
 
 # %% hacemos trilateracion sencilla para sacar condiciones iniciales
 # el array con las coordenadas de todos los puntos
@@ -206,6 +208,7 @@ def distEr(d1, d2):
     metrica del error del vector de distancias
     '''
     return np.sqrt(np.mean((d1 - d2)**2))
+
 
 def dists(xF):
     '''
@@ -334,8 +337,6 @@ ax.scatter(xBFromGPS.T[0], xBFromGPS.T[1], label='from coord GPS')
 ax.legend()
 
 
-
-
 # %%
 
 dbFlat = db[upInd]
@@ -343,10 +344,152 @@ dgFlat = dg[upInd]
 
 dif = dgFlat - dbFlat
 
-
-
 plt.figure()
 plt.scatter(dbFlat, dgFlat - dbFlat)
 
-
 np.cov(dif)
+
+
+# %% ahora sacar la incerteza en todo esto
+# establecer funcion error escalar
+def distEr2(d1, d2):
+    '''
+    metrica del error del vector de distancias
+    '''
+    return np.sum((d1 - d2)**2)
+
+def xEr(xF, d):
+    D = dists(xF)
+    return distEr2(d, D)
+
+Jex = ndf.Jacobian(xEr)
+Hex = ndf.Hessian(xEr)
+
+def newtonOptE2(x, db, ep=1e-15):
+    errores = list()
+    d = db[upInd]
+    
+    #print("cond inicial")
+    xF = x2flat(x)
+    D = dists(xF)
+    errores.append(distEr(d, D))
+    #print(errores[-1])
+
+    # hago un paso
+    A = Hex(xF, dbFlat)
+    B = Jex(xF, dbFlat)
+    dX = - ln.inv(A).dot(B.T)
+    xFp = xF + dX[:,0]
+    D = dists(xFp)
+    errores.append(distEr(d, D))
+    xF = xFp
+    
+    # mientras las correcciones sean mayores a un umbral
+    while np.mean(np.abs(xFp - xF)) > ep:
+        A = Hex(xF, dbFlat)
+        B = Jex(xF, dbFlat)
+        dX = - ln.inv(A).dot(B.T)
+        xFp = xF + dX[:,0]
+        D = dists(xFp)
+        errores.append(distEr(d, D))
+        xF = xFp
+    
+    return flat2x(xFp), errores
+
+# %%
+xF = x2flat(xBOpt)
+xEr(xF, dbFlat)
+
+xbOptE2, e2 = newtonOptE2(Xb, db)
+
+xbOptE2Flat = x2flat(xbOptE2)
+Hopt = Hex(xbOptE2Flat, dbFlat)
+Sopt = ln.inv(Hopt)
+
+plt.matshow(Sopt)
+
+
+fig, ax = plt.subplots()
+
+for i, tx in enumerate(names):
+    ax.annotate(tx, (xBOpt[i, 0], xBOpt[i, 1]))
+
+ax.scatter(xBOpt.T[0], xBOpt.T[1], label='distancias bosch')
+ax.scatter(xbOptE2.T[0], xbOptE2.T[1], label='from coord GPS')
+#ax.scatter(xGOpt.T[0], xGOpt.T[1], label='distancias google earth')
+
+ax.legend()
+
+
+
+# %%
+fi = np.linspace(0, 2*np.pi, 100)
+r = np.sqrt(chdtri(2, 0.1))  # radio para que 90% caigan adentro
+# r = 1
+Xcirc = np.array([np.cos(fi), np.sin(fi)]) * r
+
+
+def unit2CovTransf(C):
+    '''
+    returns the matrix that transforms points from unit normal pdf to a normal
+    pdf of covariance C. so that
+    Xnorm = np.random.randn(2,n)  # generate random points in 2D
+    T = unit2CovTransf(C)  # calculate transform matriz
+    X = np.dot(T, Xnorm)  # points that follow normal pdf of cov C
+    '''
+    l, v = ln.eig(C)
+
+    # matrix such that A.dot(A.T)==C
+    T =  np.sqrt(l.real) * v
+
+    return T
+
+
+def plotEllipse(ax, C, mux, muy, col):
+    '''
+    se grafica una elipse asociada a la covarianza c, centrada en mux, muy
+    '''
+    
+    T = unit2CovTransf(C)
+    # roto reescaleo para lleve del circulo a la elipse
+    xeli, yeli = np.dot(T, Xcirc)
+
+    ax.plot(xeli+mux, yeli+muy, c=col, lw=0.5)
+    v1, v2 = r * T.T
+    ax.plot([mux, mux + v1[0]], [muy, muy + v1[1]], c=col, lw=0.5)
+    ax.plot([mux, mux + v2[0]], [muy, muy + v2[1]], c=col, lw=0.5)
+
+
+# %% plotear las elipses de las posiciones
+xbOptE2
+Sopt
+col = 'b'
+
+fig, ax = plt.subplots()
+for i, tx in enumerate(names):
+    ax.annotate(tx, (xBOpt[i, 0], xBOpt[i, 1]))
+
+ax.scatter(xbOptE2[:,0], xbOptE2[:,1])
+ax.errorbar(xbOptE2[1,0], xbOptE2[1,1], xerr=np.sqrt(Sopt[0,0]), yerr=0)
+ax.set_aspect('equal')
+
+for i in range(2, len(xbOptE2)):
+    print(i)
+    i1 = 2 * i - 3
+    i2 = i1 + 2
+    C = Sopt[i1:i2,i1:i2]
+    print(C)
+    
+    plotEllipse(ax, C, xbOptE2[i,0], xbOptE2[i,1], col)
+
+
+ax.legend()
+
+
+
+
+
+
+
+
+
