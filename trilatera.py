@@ -365,7 +365,7 @@ def xEr(xF, d):
 Jex = ndf.Jacobian(xEr)
 Hex = ndf.Hessian(xEr)
 
-def newtonOptE2(x, db, ep=1e-15):
+def newtonOptE2(x, db, ep=1e-20):
     errores = list()
     d = db[upInd]
     
@@ -424,7 +424,7 @@ ax.legend()
 
 # %%
 fi = np.linspace(0, 2*np.pi, 100)
-r = np.sqrt(chdtri(2, 0.1))  # radio para que 90% caigan adentro
+r = np.sqrt(chdtri(2, 0.5))  # radio para que 90% caigan adentro
 # r = 1
 Xcirc = np.array([np.cos(fi), np.sin(fi)]) * r
 
@@ -481,7 +481,6 @@ for i in range(2, len(xbOptE2)):
     print(C)
     
     plotEllipse(ax, C, xbOptE2[i,0], xbOptE2[i,1], col)
-
 
 ax.legend()
 
