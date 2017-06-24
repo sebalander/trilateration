@@ -382,10 +382,10 @@ def newtonOptE2(x, db, ep=1e-20):
     xFp = xF + dX[:,0]
     D = dists(xFp)
     errores.append(distEr(d, D))
-    xF = xFp
     
     # mientras las correcciones sean mayores a un umbral
     while np.mean(np.abs(xFp - xF)) > ep:
+        xF = xFp
         A = Hex(xF, dbFlat)
         B = Jex(xF, dbFlat)
         dX = - ln.inv(A).dot(B.T)
