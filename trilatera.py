@@ -142,6 +142,7 @@ Db.transpose([1,0,2])[triuInd] = Db[triuInd]
 
 db = np.mean(Db, axis=2)
 
+# grafico comparacion de matris de distancias
 plt.figure()
 plt.imshow(np.hstack([db, dg]))
 
@@ -226,118 +227,69 @@ def dists(xF):
 
 # los indices para leer las distancias de la matriz
 upInd = np.triu_indices_from(db, k=1)
-# defino el jacobiano de las distancias vs x
-Jd = ndf.Jacobian(dists)
-
-def newtonOpt(Xb, db, ep=1e-15):
-    errores = list()
-    d = db[upInd]
-    
-    #print("cond inicial")
-    xF = x2flat(Xb)
-    D = dists(xF)
-    errores.append(distEr(d, D))
-    #print(errores[-1])
-
-    # hago un paso
-    j = Jd(xF)
-    xFp = xF + ln.pinv(j).dot(d - D)
-    D = dists(xFp)
-    errores.append(distEr(d, D))
-    xF = xFp
-    
-    # mientras las correcciones sean mayores aun umbral
-    while np.mean(np.abs(xFp - xF)) > ep:
-    # for i in range(10):
-        #print("paso")
-        j = Jd(xF)
-        xFp = xFp + ln.pinv(j).dot(d - D)
-        D = dists(xF)
-        errores.append(distEr(d, D))
-        xF = xFp
-        #print(errores[-1])
-    
-    return flat2x(xFp), errores
-
-xBOpt, e1 = newtonOpt(Xb, db)
-xGOpt, e2 = newtonOpt(Xg, dg)
-
-# %%
-fig, ax = plt.subplots()
-ax.scatter(xBOpt.T[0], xBOpt.T[1], label='bosch optimo')
-ax.scatter(Xb.T[0], Xb.T[1], label='bosch inicial')
-for i, tx in enumerate(names):
-    ax.annotate(tx, (xBOpt[i, 0], xBOpt[i, 1]))
-ax.legend()
-
-
-fig, ax = plt.subplots()
-ax.scatter(xGOpt.T[0], xGOpt.T[1], label='google earth optimo')
-ax.scatter(Xg.T[0], Xg.T[1], label='google earth inicial')
-for i, tx in enumerate(names):
-    ax.annotate(tx, (xGOpt[i, 0], xGOpt[i, 1]))
-ax.legend()
-
-
-
-fig, ax = plt.subplots()
-ax.scatter(xBOpt.T[0], xBOpt.T[1], label='bosch optimo')
-ax.scatter(xGOpt.T[0], xGOpt.T[1], label='google-earth optimo')
-for i, tx in enumerate(names):
-    ax.annotate(tx, (xBOpt[i, 0], xBOpt[i, 1]))
-ax.legend()
-
-
-# %% calculo la rototraslacion y escaleo mas apropiados para pasar de uno a otro
-
-def findrototras(x1, x2):
-    '''
-    recibe lista de coordenadas x1, x2 (-1, 2)
-    y retorna la matriz que transforma x2 = T*x1
-    con T de 2x3
-    '''
-    x, y = x1.T
-    ons = np.ones_like(x)
-    zer = np.zeros_like(x)
-    Ax = np.array([x, y, ons, zer])
-    Ay = np.array([y, -x, zer, ons])
-    A = np.hstack((Ax, Ay)).T
-    
-    print(Ax.shape, A.shape)
-    
-    Y = np.hstack((x2[:, 0], x2[:, 1]))
-    
-    print(Y.shape)
-    
-    sol = ln.pinv(A).dot(Y)
-    
-    R = np.array([[sol[0], sol[1]],
-                  [-sol[1], sol[0]]])
-    
-    T = np.array([[sol[2]], [sol[3]]])
-    
-    return R, T
+## defino el jacobiano de las distancias vs x
+#Jd = ndf.Jacobian(dists)
+#
+#def newtonOpt(Xb, db, ep=1e-15):
+#    errores = list()
+#    d = db[upInd]
+#    
+#    #print("cond inicial")
+#    xF = x2flat(Xb)
+#    D = dists(xF)
+#    errores.append(distEr(d, D))
+#    #print(errores[-1])
+#
+#    # hago un paso
+#    j = Jd(xF)
+#    xFp = xF + ln.pinv(j).dot(d - D)
+#    D = dists(xFp)
+#    errores.append(distEr(d, D))
+#    xF = xFp
+#    
+#    # mientras las correcciones sean mayores aun umbral
+#    while np.mean(np.abs(xFp - xF)) > ep:
+#    # for i in range(10):
+#        #print("paso")
+#        j = Jd(xF)
+#        xFp = xFp + ln.pinv(j).dot(d - D)
+#        D = dists(xF)
+#        errores.append(distEr(d, D))
+#        xF = xFp
+#        #print(errores[-1])
+#    
+#    return flat2x(xFp), errores
+#
+#xBOpt, e1 = newtonOpt(Xb, db)
+#xGOpt, e2 = newtonOpt(Xg, dg)
+#
+## %%
+#fig, ax = plt.subplots()
+#ax.scatter(xBOpt.T[0], xBOpt.T[1], label='bosch optimo')
+#ax.scatter(Xb.T[0], Xb.T[1], label='bosch inicial')
+#for i, tx in enumerate(names):
+#    ax.annotate(tx, (xBOpt[i, 0], xBOpt[i, 1]))
+#ax.legend()
+#
+#
+#fig, ax = plt.subplots()
+#ax.scatter(xGOpt.T[0], xGOpt.T[1], label='google earth optimo')
+#ax.scatter(Xg.T[0], Xg.T[1], label='google earth inicial')
+#for i, tx in enumerate(names):
+#    ax.annotate(tx, (xGOpt[i, 0], xGOpt[i, 1]))
+#ax.legend()
+#
+#
+#
+#fig, ax = plt.subplots()
+#ax.scatter(xBOpt.T[0], xBOpt.T[1], label='bosch optimo')
+#ax.scatter(xGOpt.T[0], xGOpt.T[1], label='google-earth optimo')
+#for i, tx in enumerate(names):
+#    ax.annotate(tx, (xBOpt[i, 0], xBOpt[i, 1]))
+#ax.legend()
 
 
-# %%
-gps2b = findrototras(xGPS, xBOpt)
-xBFromGPS = (np.dot(gps2b[0], xGPS.T) + gps2b[1]).T
-
-
-# %%
-fig, ax = plt.subplots()
-
-for i, tx in enumerate(names):
-    ax.annotate(tx, (xBOpt[i, 0], xBOpt[i, 1]))
-
-ax.scatter(xBOpt.T[0], xBOpt.T[1], label='distancias bosch')
-ax.scatter(xBFromGPS.T[0], xBFromGPS.T[1], label='from coord GPS')
-#ax.scatter(xGOpt.T[0], xGOpt.T[1], label='distancias google earth')
-
-ax.legend()
-
-
-# %%
+# %%esto no me acuerdo que es
 
 dbFlat = db[upInd]
 dgFlat = dg[upInd]
@@ -350,7 +302,7 @@ plt.scatter(dbFlat, dgFlat - dbFlat)
 np.cov(dif)
 
 
-# %% ahora sacar la incerteza en todo esto
+# %% ahora sacar la incerteza en todo esto y optimizar
 # establecer funcion error escalar
 def distEr2(d1, d2):
     '''
@@ -365,7 +317,7 @@ def xEr(xF, d):
 Jex = ndf.Jacobian(xEr)
 Hex = ndf.Hessian(xEr)
 
-def newtonOptE2(x, db, ep=1e-20):
+def newtonOptE2(x, db, ep=1e-10):
     errores = list()
     d = db[upInd]
     
@@ -378,44 +330,54 @@ def newtonOptE2(x, db, ep=1e-20):
     # hago un paso
     A = Hex(xF, dbFlat)
     B = Jex(xF, dbFlat)
+    l = np.real(ln.eig(A)[0])
+    print('autovals ', np.max(l), np.min(l))
     dX = - ln.inv(A).dot(B.T)
     xFp = xF + dX[:,0]
     D = dists(xFp)
     errores.append(distEr(d, D))
     
     # mientras las correcciones sean mayores a un umbral
-    while np.mean(np.abs(xFp - xF)) > ep:
+    e = np.max(np.abs(xFp - xF))
+    print('correcciones ', e)
+    while e > ep:
         xF = xFp
         A = Hex(xF, dbFlat)
         B = Jex(xF, dbFlat)
+        l = np.real(ln.eig(A)[0])
+        print('autovals ', np.max(l), np.min(l))
         dX = - ln.inv(A).dot(B.T)
         xFp = xF + dX[:,0]
         D = dists(xFp)
         errores.append(distEr(d, D))
+        e = np.max(np.abs(xFp - xF))
+        print('correcciones ', e)
         xF = xFp
     
     return flat2x(xFp), errores
 
 # %%
-xF = x2flat(xBOpt)
-xEr(xF, dbFlat)
+#xF = x2flat(xBOpt)
+#xEr(xF, dbFlat)
 
+# optimizo
 xbOptE2, e2 = newtonOptE2(Xb, db)
 
 xbOptE2Flat = x2flat(xbOptE2)
-Hopt = Hex(xbOptE2Flat, dbFlat)
+Hopt = Hex(xbOptE2Flat, dbFlat)  #hessiano en el optimo
 Sopt = ln.inv(Hopt)
 
+# grafico la covarianza
 plt.matshow(Sopt)
 
 
 fig, ax = plt.subplots()
 
 for i, tx in enumerate(names):
-    ax.annotate(tx, (xBOpt[i, 0], xBOpt[i, 1]))
+    ax.annotate(tx, (xbOptE2[i, 0], xbOptE2[i, 1]))
 
-ax.scatter(xBOpt.T[0], xBOpt.T[1], label='distancias bosch')
-ax.scatter(xbOptE2.T[0], xbOptE2.T[1], label='from coord GPS')
+ax.scatter(Xb.T[0], Xb.T[1], label='bosch inicial')
+ax.scatter(xbOptE2.T[0], xbOptE2.T[1], label='bosch optimizado')
 #ax.scatter(xGOpt.T[0], xGOpt.T[1], label='distancias google earth')
 
 ax.legend()
@@ -467,7 +429,7 @@ col = 'b'
 
 fig, ax = plt.subplots()
 for i, tx in enumerate(names):
-    ax.annotate(tx, (xBOpt[i, 0], xBOpt[i, 1]))
+    ax.annotate(tx, (xbOptE2[i, 0], xbOptE2[i, 1]))
 
 ax.scatter(xbOptE2[:,0], xbOptE2[:,1])
 ax.errorbar(xbOptE2[1,0], xbOptE2[1,1], xerr=np.sqrt(Sopt[0,0]), yerr=0)
@@ -481,6 +443,60 @@ for i in range(2, len(xbOptE2)):
     print(C)
     
     plotEllipse(ax, C, xbOptE2[i,0], xbOptE2[i,1], col)
+
+ax.legend()
+
+
+
+
+
+
+
+# %% calculo la rototraslacion y escaleo mas apropiados para pasar de uno a otro
+
+def findrototras(x1, x2):
+    '''
+    recibe lista de coordenadas x1, x2 (-1, 2)
+    y retorna la matriz que transforma x2 = T*x1
+    con T de 2x3
+    '''
+    x, y = x1.T
+    ons = np.ones_like(x)
+    zer = np.zeros_like(x)
+    Ax = np.array([x, y, ons, zer])
+    Ay = np.array([y, -x, zer, ons])
+    A = np.hstack((Ax, Ay)).T
+    
+    print(Ax.shape, A.shape)
+    
+    Y = np.hstack((x2[:, 0], x2[:, 1]))
+    
+    print(Y.shape)
+    
+    sol = ln.pinv(A).dot(Y)
+    
+    R = np.array([[sol[0], sol[1]],
+                  [-sol[1], sol[0]]])
+    
+    T = np.array([[sol[2]], [sol[3]]])
+    
+    return R, T
+
+
+# %%
+gps2b = findrototras(xGPS, xbOptE2)
+xBFromGPS = (np.dot(gps2b[0], xGPS.T) + gps2b[1]).T
+
+
+# %%
+fig, ax = plt.subplots()
+
+for i, tx in enumerate(names):
+    ax.annotate(tx, (xbOptE2[i, 0], xbOptE2[i, 1]))
+
+ax.scatter(xbOptE2.T[0], xbOptE2.T[1], label='bosch optimizado')
+ax.scatter(xBFromGPS.T[0], xBFromGPS.T[1], label='google earth to bosch')
+#ax.scatter(xGOpt.T[0], xGOpt.T[1], label='distancias google earth')
 
 ax.legend()
 
